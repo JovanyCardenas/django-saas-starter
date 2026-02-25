@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+  <div class="space-y-4">
+    <div>
+      <h1 class="text-2xl font-semibold">Dashboard</h1>
+      <p class="text-sm text-gray-600">You’re signed in and scoped to the selected organization.</p>
+    </div>
+
+    <div class="rounded-lg border bg-white p-4">
+      <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <dt class="text-xs uppercase tracking-wide text-gray-500">Tenant</dt>
+          <dd class="mt-1 text-sm font-medium">{{ tenant.name }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs uppercase tracking-wide text-gray-500">Signed in as</dt>
+          <dd class="mt-1 text-sm font-medium">{{ request.user.email }}</dd>
+        </div>
+      </dl>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        <a class="inline-flex items-center rounded-md bg-black px-3 py-2 text-sm font-medium text-white" href="/tenants/clear/">Switch tenant</a>
+        <a class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium" href="/admin/">Admin</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Choose Tenant{% endblock %}
+
+{% block content %}
+  <h1 class="text-xl font-semibold mb-4">Choose an organization</h1>
+
+  {% if memberships %}
+    <form method="post" class="space-y-3">
+      {% csrf_token %}
+      {% for m in memberships %}
+        <label class="block p-3 border rounded cursor-pointer bg-white">
+          <input type="radio" name="tenant_id" value="{{ m.tenant.id }}" class="mr-2">
+          <span class="font-medium">{{ m.tenant.name }}</span>
+          <span class="text-sm text-gray-500 ml-2">({{ m.get_role_display }})</span>
+        </label>
+      {% endfor %}
+
+      <button class="mt-2 px-4 py-2 rounded bg-black text-white" type="submit">Continue</button>
+    </form>
+  {% else %}
+    <p>You do not belong to any organization yet.</p>
+  {% endif %}
+{% endblock %}
