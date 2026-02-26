@@ -3,8 +3,28 @@ from __future__ import annotations
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
 
 User = get_user_model()
+
+
+def _audit(action: str, tenant, message: str, *, meta: dict | None = None):
+    """Best-effort audit log writer.
+
+    Management commands don't have a request, so actor/ip/user-agent aren't available.
+    We log as a system event and include structured metadata.
+    """
+    AuditLogEntry = _get_model("auditlog", "AuditLogEntry")
+    if AuditLogEntry is None:
+        return  # auditlog app not installed yet
+    AuditLogEntry.objects.create(
+        tenant=tenant,
+        actor=None,
+        actor_email="system",
+        action=action,
+        message=message,
+        meta=meta or {},
+    )
 
 
 def _get_model(app_label: str, model_name: str):
@@ -124,6 +144,18 @@ class Command(BaseCommand):
                 first.save()
                 if existing.count() > 1:
                     existing.exclude(pk=first.pk).delete()
+                _audit(
+                    "update",
+                    tenant,
+                    f"RBAC role updated via assign_role: {email} -> {role_identifier}",
+                    meta={
+                        "tenant_slug": tenant_slug,
+                        "target_user_email": email,
+                        "role_identifier": role_identifier,
+                        "replace": True,
+                        "assignment_model": f"{AssignmentModel._meta.app_label}.{AssignmentModel.__name__}",
+                    },
+                )
                 self.stdout.write(self.style.SUCCESS(
                     f"Updated role for {email} in {tenant_slug} to {role_identifier} (replace=True)"
                 ))
@@ -131,6 +163,18 @@ class Command(BaseCommand):
 
             # If not replace, ensure role already exists or create additional row
             if existing.filter(role=role).exists():
+                _audit(
+                    "access",
+                    tenant,
+                    f"RBAC role assign attempted (no-op): {email} already has {role_identifier}",
+                    meta={
+                        "tenant_slug": tenant_slug,
+                        "target_user_email": email,
+                        "role_identifier": role_identifier,
+                        "replace": False,
+                        "result": "no_op",
+                    },
+                )
                 self.stdout.write(self.style.WARNING(
                     f"{email} already has role {role_identifier} in {tenant_slug}"
                 ))
@@ -138,6 +182,20 @@ class Command(BaseCommand):
 
             # Create a second assignment if your schema allows multiple roles
             obj = AssignmentModel.objects.create(user=user, role=role, **tenant_filter)
+            _audit(
+                "create",
+                tenant,
+                f"RBAC additional role assigned via assign_role: {email} -> {role_identifier}",
+                meta={
+                    "tenant_slug": tenant_slug,
+                    "target_user_email": email,
+                    "role_identifier": role_identifier,
+                    "replace": False,
+                    "result": "additional_role",
+                    "assignment_pk": str(obj.pk),
+                    "assignment_model": f"{AssignmentModel._meta.app_label}.{AssignmentModel.__name__}",
+                },
+            )
             self.stdout.write(self.style.SUCCESS(
                 f"Added additional role for {email} in {tenant_slug}: {role_identifier} (pk={obj.pk})"
             ))
@@ -145,6 +203,20 @@ class Command(BaseCommand):
 
         # No assignment exists: create
         obj = AssignmentModel.objects.create(user=user, role=role, **tenant_filter)
+        _audit(
+            "create",
+            tenant,
+            f"RBAC role assigned via assign_role: {email} -> {role_identifier}",
+            meta={
+                "tenant_slug": tenant_slug,
+                "target_user_email": email,
+                "role_identifier": role_identifier,
+                "replace": bool(replace),
+                "result": "assigned",
+                "assignment_pk": str(obj.pk),
+                "assignment_model": f"{AssignmentModel._meta.app_label}.{AssignmentModel.__name__}",
+            },
+        )
         self.stdout.write(self.style.SUCCESS(
             f"Assigned role {role_identifier} to {email} in {tenant_slug} (pk={obj.pk})"
         ))

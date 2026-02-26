@@ -8,6 +8,26 @@ from django.db import transaction
 User = get_user_model()
 
 
+def _audit(tenant, message: str, *, action: str = "system", actor=None, actor_email: str = "system", meta: dict | None = None):
+    """Best-effort audit logger for management commands."""
+    try:
+        AuditLogEntry = apps.get_model("auditlog", "AuditLogEntry")
+        if AuditLogEntry is None:
+            return
+
+        AuditLogEntry.objects.create(
+            tenant=tenant,
+            actor=actor,
+            actor_email=actor_email,
+            action=action,
+            message=message,
+            meta=meta or {},
+        )
+    except Exception:
+        # audit logging should never block bootstrap
+        return
+
+
 class Command(BaseCommand):
     help = (
         "Bootstrap a tenant end-to-end.\n"
@@ -61,13 +81,31 @@ class Command(BaseCommand):
             slug=slug,
             defaults={"name": name},
         )
+        tenant_name_changed = False
         if not created and tenant.name != name:
             tenant.name = name
             tenant.save(update_fields=["name"])
+            tenant_name_changed = True
+
+        _audit(
+            tenant,
+            f"Tenant {'created' if created else 'loaded'}: {tenant.slug}",
+            action="create" if created else "read",
+            actor=None,
+            actor_email="system",
+            meta={
+                "tenant_slug": tenant.slug,
+                "tenant_id": str(tenant.id),
+                "name": tenant.name,
+                "created": created,
+                "name_changed": tenant_name_changed,
+            },
+        )
 
         # 2) Create or reuse owner user
         user = User.objects.filter(email=owner_email).first()
         generated_password = None
+        user_created = False
 
         if not user:
             password = opts["owner_password"]
@@ -81,6 +119,22 @@ class Command(BaseCommand):
                 first_name=opts["owner_first_name"],
                 last_name=opts["owner_last_name"],
             )
+            user_created = True
+
+        _audit(
+            tenant,
+            f"Owner user {'created' if user_created else 'reused'}: {owner_email}",
+            action="create" if user_created else "read",
+            actor=user if user_created else None,
+            actor_email=owner_email,
+            meta={
+                "tenant_slug": tenant.slug,
+                "user_email": owner_email,
+                "user_id": str(user.id),
+                "created": user_created,
+                "generated_password": bool(generated_password),
+            },
+        )
 
         # 3) Create or update tenant membership
         membership, m_created = TenantMembership.objects.get_or_create(
@@ -88,16 +142,39 @@ class Command(BaseCommand):
             user=user,
             defaults={"role": membership_role, "is_active": True},
         )
+
+        membership_changed = False
+        old_role = membership.role
+        old_active = membership.is_active
+
         if not m_created:
-            changed = False
             if membership.role != membership_role:
                 membership.role = membership_role
-                changed = True
+                membership_changed = True
             if not membership.is_active:
                 membership.is_active = True
-                changed = True
-            if changed:
+                membership_changed = True
+            if membership_changed:
                 membership.save(update_fields=["role", "is_active"])
+
+        _audit(
+            tenant,
+            f"Tenant membership {'created' if m_created else 'updated' if membership_changed else 'unchanged'}: {owner_email} -> {membership.role}",
+            action="create" if m_created else "update" if membership_changed else "read",
+            actor=user,
+            actor_email=owner_email,
+            meta={
+                "tenant_slug": tenant.slug,
+                "user_email": owner_email,
+                "membership_id": str(membership.id),
+                "created": m_created,
+                "changed": membership_changed,
+                "old_role": old_role,
+                "new_role": membership.role,
+                "old_is_active": old_active,
+                "new_is_active": membership.is_active,
+            },
+        )
 
         # 4) Seed RBAC + assign RBAC role
         # This is separate from TenantMembership.role (your membership role is coarse; RBAC can be granular)
@@ -108,22 +185,51 @@ class Command(BaseCommand):
             # assign RBAC "owner" role to the owner user in this tenant
             call_command("assign_role", slug, owner_email, "owner", "--replace")
 
-        # Audit log (non-fatal)
-        try:
-            from apps.auditlog.services import log_event
-            log_event(
-                tenant=tenant,
-                action="bootstrap_tenant",
+            _audit(
+                tenant,
+                f"RBAC seeded and owner role assigned for {owner_email}",
+                action="system",
                 actor=user,
                 actor_email=owner_email,
-                object_type="Tenant",
-                object_id=str(tenant.id),
-                message=f"Bootstrapped tenant '{tenant.name}' ({tenant.slug})",
-                metadata={"membership_role": membership.role, "skip_rbac": skip_rbac},
+                meta={
+                    "tenant_slug": tenant.slug,
+                    "user_email": owner_email,
+                    "rbac_seeded": True,
+                    "rbac_assigned_role": "owner",
+                    "replace": True,
+                },
             )
-        except Exception:
-            # audit log should never block bootstrap
-            pass
+        else:
+            _audit(
+                tenant,
+                "RBAC bootstrap skipped",
+                action="system",
+                actor=user,
+                actor_email=owner_email,
+                meta={
+                    "tenant_slug": tenant.slug,
+                    "user_email": owner_email,
+                    "rbac_seeded": False,
+                    "rbac_assigned_role": None,
+                    "skip_rbac": True,
+                },
+            )
+
+        # Final audit log entry
+        _audit(
+            tenant,
+            f"Bootstrapped tenant '{tenant.name}' ({tenant.slug})",
+            action="bootstrap_tenant",
+            actor=user,
+            actor_email=owner_email,
+            meta={
+                "tenant_slug": tenant.slug,
+                "tenant_id": str(tenant.id),
+                "owner_email": owner_email,
+                "membership_role": membership.role,
+                "skip_rbac": skip_rbac,
+            },
+        )
 
         # Output summary
         self.stdout.write(self.style.SUCCESS(f"Tenant: {tenant.name} ({tenant.slug})"))

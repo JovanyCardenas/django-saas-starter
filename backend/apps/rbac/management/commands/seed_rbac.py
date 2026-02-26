@@ -1,4 +1,6 @@
+from django.apps import apps
 from django.core.management.base import BaseCommand
+
 from apps.tenants.models import Tenant
 from apps.rbac.models import Permission, Role, RolePermission
 
@@ -48,6 +50,23 @@ DEFAULT_ROLES = {
     ],
 }
 
+
+def _audit(tenant: Tenant, message: str, *, meta: dict | None = None):
+    """Best-effort audit log writer for management commands."""
+    AuditLogEntry = apps.get_model("auditlog", "AuditLogEntry")
+    if AuditLogEntry is None:
+        return
+
+    AuditLogEntry.objects.create(
+        tenant=tenant,
+        actor=None,
+        actor_email="system",
+        action="system",
+        message=message,
+        meta=meta or {},
+    )
+
+
 class Command(BaseCommand):
     help = "Seed default permissions and roles for a given tenant slug."
 
@@ -61,20 +80,43 @@ class Command(BaseCommand):
             self.stderr.write(self.style.ERROR(f"Tenant '{tenant_slug}' not found."))
             return
 
+        created_perms = 0
+        created_roles = 0
+        created_role_perms = 0
+
         # permissions
         perm_map = {}
         for code, name in DEFAULT_PERMS:
-            perm, _ = Permission.objects.get_or_create(code=code, defaults={"name": name})
+            perm, created = Permission.objects.get_or_create(code=code, defaults={"name": name})
+            if created:
+                created_perms += 1
             perm_map[code] = perm
 
         # roles + role-perms
         for role_code, perm_codes in DEFAULT_ROLES.items():
-            role, _ = Role.objects.get_or_create(
+            role, created = Role.objects.get_or_create(
                 tenant=tenant,
                 code=role_code,
                 defaults={"name": role_code.replace("_", " ").title()},
             )
+            if created:
+                created_roles += 1
             for pcode in perm_codes:
-                RolePermission.objects.get_or_create(role=role, permission=perm_map[pcode])
+                _, created = RolePermission.objects.get_or_create(role=role, permission=perm_map[pcode])
+                if created:
+                    created_role_perms += 1
+
+        _audit(
+            tenant,
+            f"Seeded RBAC for tenant '{tenant.slug}'",
+            meta={
+                "tenant_slug": tenant.slug,
+                "created_permissions": created_perms,
+                "created_roles": created_roles,
+                "created_role_permissions": created_role_perms,
+                "default_perm_count": len(DEFAULT_PERMS),
+                "default_role_count": len(DEFAULT_ROLES),
+            },
+        )
 
         self.stdout.write(self.style.SUCCESS(f"Seeded RBAC for tenant '{tenant.slug}'"))

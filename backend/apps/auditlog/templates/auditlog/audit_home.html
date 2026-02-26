@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Log{% endblock %}
+
+{% block content %}
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-semibold tracking-tight">Audit Log</h1>
+      <p class="mt-1 text-sm text-gray-600">Recent activity for this tenant.</p>
+    </div>
+
+    {% if request.tenant %}
+      <span class="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">{{ request.tenant.name }}</span>
+    {% endif %}
+  </div>
+
+  {% if entries %}
+    <div class="mt-6 overflow-hidden rounded-lg border bg-white">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Time</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Actor</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Action</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Message</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Object</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">IP</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            {% for e in entries %}
+              <tr class="hover:bg-gray-50">
+                <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                  {{ e.created_at|date:"M j, Y" }} <span class="text-gray-400">·</span> {{ e.created_at|time:"P" }}
+                </td>
+                <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                  {% if e.actor %}{{ e.actor }}{% elif e.actor_email %}{{ e.actor_email }}{% else %}<span class="text-gray-400">System</span>{% endif %}
+                </td>
+                <td class="whitespace-nowrap px-4 py-3 text-sm">
+                  <span class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">{{ e.action }}</span>
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-700">{{ e.message|default:"" }}</td>
+                <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                  {% if e.object_type and e.object_id %}
+                    <span class="text-gray-500">{{ e.object_type }}</span> <span class="text-gray-400">#</span> {{ e.object_id }}
+                  {% elif e.object_type %}
+                    {{ e.object_type }}
+                  {% else %}
+                    <span class="text-gray-400">—</span>
+                  {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{{ e.ip_address|default:"—" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if page_obj %}
+        <div class="flex items-center justify-between border-t bg-white px-4 py-3">
+          <div class="text-sm text-gray-600">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+          <div class="flex items-center gap-2">
+            {% if page_obj.has_previous %}
+              <a class="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+              <a class="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50" href="?page={{ page_obj.next_page_number }}">Next</a>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="mt-6 rounded-lg border bg-white p-6">
+      <div class="text-sm text-gray-600">No audit events yet for this tenant.</div>
+      <div class="mt-2 text-sm text-gray-500">
+        Once you run commands like <span class="font-mono">seed_rbac</span>, <span class="font-mono">assign_role</span>, or <span class="font-mono">bootstrap_tenant</span>, events will appear here.
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
