@@ -244,3 +244,36 @@ def assign_rbac_role(request):
             return redirect("settings_panel:roles")
 
     return redirect("settings_panel:roles")
+
+@login_required
+def deactivate_rbac_role(request, assignment_id):
+    tenant = _get_tenant_or_forbid(request)
+    if tenant is None:
+        return HttpResponseForbidden("No tenant selected.")
+    if not _require_settings_access(request, tenant):
+        return HttpResponseForbidden("You do not have access to update roles.")
+
+    assignment = get_object_or_404(TenantUserRole, id=assignment_id, tenant=tenant)
+
+    if request.method == "POST":
+        assignment.is_active = False
+        assignment.save(update_fields=["is_active"])
+
+        log_event(
+            tenant=tenant,
+            actor=request.user,
+            request=request,
+            action="update",
+            message=f"RBAC role deactivated: {assignment.user.email} -> {assignment.role.code}",
+            object_type="TenantUserRole",
+            object_id=assignment.id,
+            meta={
+                "target_user_email": assignment.user.email,
+                "role_code": assignment.role.code,
+                "is_active": False,
+            },
+        )
+
+        messages.success(request, "RBAC role assignment deactivated.")
+
+    return redirect("settings_panel:roles")
