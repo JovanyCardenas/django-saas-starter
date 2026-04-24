@@ -1,5 +1,5 @@
 from django import forms
-from apps.tenants.models import TenantMembership
+from apps.tenants.models import TenantMembership, Tenant
 
 from apps.rbac.models import Role
 
@@ -39,3 +39,17 @@ class AcceptInvitationForm(forms.Form):
         if cleaned.get("password1") != cleaned.get("password2"):
             raise forms.ValidationError("Passwords do not match.")
         return cleaned
+
+
+class OrganizationSettingsForm(forms.ModelForm):
+    class Meta:
+        model = Tenant
+        fields = ["name", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs={
+                "class": "rounded-md border px-3 py-2 text-sm",
+            }),
+            "is_active": forms.CheckboxInput(attrs={
+                "class": "h-4 w-4 rounded border-gray-300",
+            }),
+        }

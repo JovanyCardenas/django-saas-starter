@@ -6,6 +6,7 @@ class AppsTestRunner(DiscoverRunner):
         "apps.tenants.tests",
         "apps.rbac.tests",
         "apps.settings_panel.tests",
+        "apps.files.tests",
     ]
 
     def build_suite(self, test_labels=None, extra_tests=None, **kwargs):

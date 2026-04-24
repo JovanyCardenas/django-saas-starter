@@ -159,8 +159,38 @@ def organization_settings(request):
     if not _require_settings_access(request, tenant):
         return HttpResponseForbidden("You do not have access to organization settings.")
 
+    if request.method == "POST":
+        form = OrganizationSettingsForm(request.POST, instance=tenant)
+        if form.is_valid():
+            old_name = tenant.name
+            old_active = tenant.is_active
+
+            updated_tenant = form.save()
+
+            log_event(
+                tenant=updated_tenant,
+                actor=request.user,
+                request=request,
+                action="update",
+                message=f"Organization settings updated: {updated_tenant.name}",
+                object_type="Tenant",
+                object_id=updated_tenant.id,
+                meta={
+                    "old_name": old_name,
+                    "new_name": updated_tenant.name,
+                    "old_is_active": old_active,
+                    "new_is_active": updated_tenant.is_active,
+                },
+            )
+
+            messages.success(request, "Organization settings updated.")
+            return redirect("settings_panel:organization")
+    else:
+        form = OrganizationSettingsForm(instance=tenant)
+
     return render(request, "settings_panel/organization.html", {
         "tenant": tenant,
+        "form": form,
     })
 
 
