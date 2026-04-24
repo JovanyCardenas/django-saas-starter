@@ -2,14 +2,22 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, login
 
 from apps.tenants.models import TenantMembership
 from apps.tenants.permissions import user_can_manage_tenant
 from apps.rbac.models import TenantUserRole, Role
 
-from .forms import AddMemberForm, UpdateMemberRoleForm, AssignRBACRoleForm
+from .forms import *
 from apps.auditlog.services import log_event
+
+from datetime import timedelta
+from django.urls import reverse
+from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
+
+from .models import TenantInvitation
 
 User = get_user_model()
 
@@ -277,3 +285,118 @@ def deactivate_rbac_role(request, assignment_id):
         messages.success(request, "RBAC role assignment deactivated.")
 
     return redirect("settings_panel:roles")
+
+@login_required
+def invite_member(request):
+    tenant = _get_tenant_or_forbid(request)
+    if tenant is None:
+        return HttpResponseForbidden("No tenant selected.")
+    if not _require_settings_access(request, tenant):
+        return HttpResponseForbidden("You do not have access to invite members.")
+
+    if request.method == "POST":
+        form = InviteMemberForm(request.POST)
+        if form.is_valid():
+            invitation = TenantInvitation.objects.create(
+                tenant=tenant,
+                email=form.cleaned_data["email"].lower(),
+                role=form.cleaned_data["role"],
+                invited_by=request.user,
+                expires_at=timezone.now() + timedelta(days=7),
+            )
+
+            accept_url = request.build_absolute_uri(
+                reverse("settings_panel:accept_invitation", args=[invitation.token])
+            )
+
+            send_mail(
+                subject=f"You were invited to {tenant.name}",
+                message=f"You were invited to join {tenant.name}.\n\nAccept invitation: {accept_url}",
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@example.com"),
+                recipient_list=[invitation.email],
+                fail_silently=False,
+            )
+
+            log_event(
+                tenant=tenant,
+                actor=request.user,
+                request=request,
+                action="create",
+                message=f"Invitation sent to {invitation.email} as {invitation.role}",
+                object_type="TenantInvitation",
+                object_id=invitation.id,
+                meta={"email": invitation.email, "role": invitation.role},
+            )
+
+            messages.success(request, f"Invitation sent to {invitation.email}.")
+            return redirect("settings_panel:members")
+
+    return redirect("settings_panel:members")
+
+def accept_invitation(request, token):
+    invitation = TenantInvitation.objects.filter(token=token).select_related("tenant").first()
+
+    if not invitation:
+        return HttpResponseForbidden("Invalid invitation.")
+
+    if invitation.status != TenantInvitation.Status.PENDING:
+        return HttpResponseForbidden("This invitation is no longer available.")
+
+    if invitation.is_expired():
+        invitation.status = TenantInvitation.Status.EXPIRED
+        invitation.save(update_fields=["status"])
+        return HttpResponseForbidden("This invitation has expired.")
+
+    existing_user = User.objects.filter(email=invitation.email).first()
+
+    if request.method == "POST":
+        if existing_user:
+            user = existing_user
+        else:
+            form = AcceptInvitationForm(request.POST)
+            if not form.is_valid():
+                return render(request, "settings_panel/accept_invitation.html", {
+                    "invitation": invitation,
+                    "form": form,
+                    "existing_user": existing_user,
+                })
+
+            user = User.objects.create_user(
+                email=invitation.email,
+                password=form.cleaned_data["password1"],
+            )
+
+        TenantMembership.objects.update_or_create(
+            tenant=invitation.tenant,
+            user=user,
+            defaults={"role": invitation.role, "is_active": True},
+        )
+
+        invitation.status = TenantInvitation.Status.ACCEPTED
+        invitation.accepted_by = user
+        invitation.accepted_at = timezone.now()
+        invitation.save(update_fields=["status", "accepted_by", "accepted_at"])
+
+        log_event(
+            tenant=invitation.tenant,
+            actor=user,
+            actor_email=user.email,
+            request=request,
+            action="create",
+            message=f"Invitation accepted: {user.email}",
+            object_type="TenantInvitation",
+            object_id=invitation.id,
+            meta={"email": user.email, "role": invitation.role},
+        )
+
+        login(request, user)
+        request.session["active_tenant_id"] = str(invitation.tenant.id)
+        return redirect("settings_panel:members")
+
+    form = AcceptInvitationForm()
+
+    return render(request, "settings_panel/accept_invitation.html", {
+        "invitation": invitation,
+        "form": form,
+        "existing_user": existing_user,
+    })

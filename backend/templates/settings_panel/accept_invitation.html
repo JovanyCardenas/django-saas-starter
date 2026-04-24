@@ -1,0 +1,29 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Accept Invitation{% endblock %}
+
+{% block content %}
+  <div class="rounded-lg border bg-white p-6">
+    <h1 class="text-2xl font-semibold">Accept invitation</h1>
+    <p class="mt-2 text-sm text-gray-600">
+      You were invited to join <strong>{{ invitation.tenant.name }}</strong> as
+      <strong>{{ invitation.role }}</strong>.
+    </p>
+
+    <form method="post" class="mt-6 space-y-4">
+      {% csrf_token %}
+
+      {% if existing_user %}
+        <p class="rounded-md bg-gray-50 p-3 text-sm text-gray-600">
+          An account already exists for {{ invitation.email }}. Accepting will add that account to this organization.
+        </p>
+      {% else %}
+        {{ form.as_p }}
+      {% endif %}
+
+      <button class="w-full rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800" type="submit">
+        Accept invitation
+      </button>
+    </form>
+  </div>
+{% endblock %}

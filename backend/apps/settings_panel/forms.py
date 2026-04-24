@@ -25,3 +25,17 @@ class AddMemberForm(forms.Form):
 
 class UpdateMemberRoleForm(forms.Form):
     role = forms.ChoiceField(choices=TenantMembership.Role.choices)
+
+class InviteMemberForm(forms.Form):
+    email = forms.EmailField()
+    role = forms.ChoiceField(choices=TenantMembership.Role.choices)
+
+class AcceptInvitationForm(forms.Form):
+    password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
+    password2 = forms.CharField(label="Confirm password", widget=forms.PasswordInput)
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("password1") != cleaned.get("password2"):
+            raise forms.ValidationError("Passwords do not match.")
+        return cleaned

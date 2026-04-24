@@ -40,6 +40,31 @@
       </div>
     </form>
 
+    <form method="post" action="{% url 'settings_panel:invite_member' %}" class="rounded-lg border bg-white p-4">
+  {% csrf_token %}
+
+  <div class="mb-3">
+    <h2 class="text-sm font-semibold">Invite Member</h2>
+    <p class="text-xs text-gray-500">Use this when the user does not have an account yet.</p>
+  </div>
+
+  <div class="grid gap-3 sm:grid-cols-3">
+    <input name="email" type="email" placeholder="newuser@example.com" required class="rounded-md border px-3 py-2 text-sm">
+
+    <select name="role" class="rounded-md border px-3 py-2 text-sm">
+      <option value="owner">Owner</option>
+      <option value="admin">Admin</option>
+      <option value="staff">Staff</option>
+      <option value="member">Member</option>
+      <option value="viewer">Viewer</option>
+    </select>
+
+    <button class="rounded-md border px-4 py-2 text-sm font-medium hover:bg-gray-50" type="submit">
+      Send Invite
+    </button>
+  </div>
+</form>
+
     <div class="overflow-hidden rounded-lg border bg-white">
       <table class="min-w-full text-sm">
         <thead class="bg-gray-50 text-left">
