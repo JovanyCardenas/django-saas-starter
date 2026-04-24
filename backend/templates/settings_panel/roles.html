@@ -9,6 +9,35 @@
       <p class="text-sm text-gray-600">Assigned RBAC roles for this tenant.</p>
     </div>
 
+    <form method="post" action="{% url 'settings_panel:assign_rbac_role' %}" class="rounded-lg border bg-white p-4">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <h2 class="text-sm font-semibold">Assign RBAC Role</h2>
+            <p class="text-xs text-gray-500">The user must already exist and belong to this tenant.</p>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-3">
+            <input
+            name="user_email"
+            type="email"
+            placeholder="user@example.com"
+            required
+            class="rounded-md border px-3 py-2 text-sm"
+            >
+
+            <select name="role_id" class="rounded-md border px-3 py-2 text-sm" required>
+            {% for role in available_roles %}
+                <option value="{{ role.id }}">{{ role.name }} ({{ role.code }})</option>
+            {% endfor %}
+            </select>
+
+            <button class="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800" type="submit">
+            Assign Role
+            </button>
+        </div>
+        </form>
+
     <div class="overflow-hidden rounded-lg border bg-white">
       <table class="min-w-full text-sm">
         <thead class="bg-gray-50 text-left">
