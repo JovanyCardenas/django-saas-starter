@@ -207,8 +207,14 @@ def member_settings(request):
         tenant=tenant
     ).select_related("user").order_by("user__email")
 
+    invitations = TenantInvitation.objects.filter(
+        tenant=tenant,
+        status=TenantInvitation.Status.PENDING
+    ).order_by("-created_at")
+
     return render(request, "settings_panel/members.html", {
         "memberships": memberships,
+        "invitations": invitations,
     })
 
 

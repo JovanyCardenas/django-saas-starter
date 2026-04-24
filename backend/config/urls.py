@@ -5,8 +5,8 @@ from django.conf.urls.static import static
 
 from django.http import HttpResponse
 
-def home(request):
-    return HttpResponse("Home (replace with dashboard)")
+handler403 = "config.views.custom_403"
+handler404 = "config.views.custom_404"
 
 urlpatterns = [
     path("admin/", admin.site.urls),
