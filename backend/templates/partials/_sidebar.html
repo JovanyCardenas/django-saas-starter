@@ -10,15 +10,17 @@
       <a class="block rounded-md px-3 py-2 text-sm hover:bg-gray-50" href="/tenants/choose/">Tenants</a>
     </div>
 
-    <div class="mt-4 border-t pt-4">
-      <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">Settings</div>
-      <div class="mt-3 space-y-1">
-        <a class="block rounded-md px-3 py-2 text-sm hover:bg-gray-50" href="/settings/organization/">Organization</a>
-        <a class="block rounded-md px-3 py-2 text-sm hover:bg-gray-50" href="/settings/members/">Members</a>
-        <a class="block rounded-md px-3 py-2 text-sm hover:bg-gray-50" href="/settings/roles/">Roles</a>
-        <a class="block rounded-md px-3 py-2 text-sm hover:bg-gray-50" href="/audit/">Audit Log</a>
+    {% if request.user.is_superuser or request.user.tenant_memberships.all %}
+      <div class="mt-4 border-t pt-4">
+        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">Settings</div>
+        <div class="mt-3 space-y-1">
+          <a class="block rounded-md px-3 py-2 text-sm hover:bg-gray-50" href="/settings/organization/">Organization</a>
+          <a class="block rounded-md px-3 py-2 text-sm hover:bg-gray-50" href="/settings/members/">Members</a>
+          <a class="block rounded-md px-3 py-2 text-sm hover:bg-gray-50" href="/settings/roles/">Roles</a>
+          <a class="block rounded-md px-3 py-2 text-sm hover:bg-gray-50" href="/audit/">Audit Log</a>
+        </div>
       </div>
-    </div>
+    {% endif %}
 
     <div class="mt-4 border-t pt-4">
       <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">Template Tools</div>

@@ -7,4 +7,7 @@ urlpatterns = [
     path("organization/", views.organization_settings, name="organization"),
     path("members/", views.member_settings, name="members"),
     path("roles/", views.role_settings, name="roles"),
+    path("members/add/", views.add_member, name="add_member"),
+    path("members/<uuid:membership_id>/role/", views.update_member_role, name="update_member_role"),
+    path("members/<uuid:membership_id>/deactivate/", views.deactivate_member, name="deactivate_member"),
 ]

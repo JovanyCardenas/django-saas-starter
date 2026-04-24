@@ -3,33 +3,117 @@
 {% block title %}Members{% endblock %}
 
 {% block content %}
-  <div class="space-y-4">
+  <div class="space-y-6">
     <div>
       <h1 class="text-2xl font-semibold">Members</h1>
-      <p class="text-sm text-gray-600">Users connected to this tenant.</p>
+      <p class="text-sm text-gray-600">Manage users connected to this tenant.</p>
     </div>
+
+    <form method="post" action="{% url 'settings_panel:add_member' %}" class="rounded-lg border bg-white p-4">
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <h2 class="text-sm font-semibold">Add Member</h2>
+        <p class="text-xs text-gray-500">The user must already have an account before being added.</p>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-3">
+        <input
+          name="email"
+          type="email"
+          placeholder="user@example.com"
+          required
+          class="rounded-md border px-3 py-2 text-sm"
+        >
+
+        <select name="role" class="rounded-md border px-3 py-2 text-sm">
+          <option value="owner">Owner</option>
+          <option value="admin">Admin</option>
+          <option value="staff">Staff</option>
+          <option value="member">Member</option>
+          <option value="viewer">Viewer</option>
+        </select>
+
+        <button class="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800" type="submit">
+          Add Member
+        </button>
+      </div>
+    </form>
 
     <div class="overflow-hidden rounded-lg border bg-white">
       <table class="min-w-full text-sm">
         <thead class="bg-gray-50 text-left">
           <tr>
             <th class="px-4 py-3">User</th>
-            <th class="px-4 py-3">Role</th>
+            <th class="px-4 py-3">Current Role</th>
             <th class="px-4 py-3">Active</th>
             <th class="px-4 py-3">Joined</th>
+            <th class="px-4 py-3">Actions</th>
           </tr>
         </thead>
+
         <tbody>
           {% for membership in memberships %}
-            <tr class="border-t">
-              <td class="px-4 py-3">{{ membership.user.email }}</td>
-              <td class="px-4 py-3">{{ membership.get_role_display }}</td>
-              <td class="px-4 py-3">{{ membership.is_active }}</td>
-              <td class="px-4 py-3">{{ membership.joined_at }}</td>
+            <tr class="border-t align-top">
+              <td class="px-4 py-3">
+                <div class="font-medium">{{ membership.user.email }}</div>
+                <div class="text-xs text-gray-500">
+                  {{ membership.user.first_name }} {{ membership.user.last_name }}
+                </div>
+              </td>
+
+              <td class="px-4 py-3">
+                <span class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+                  {{ membership.get_role_display }}
+                </span>
+              </td>
+
+              <td class="px-4 py-3">
+                {% if membership.is_active %}
+                  <span class="rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700">Active</span>
+                {% else %}
+                  <span class="rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700">Inactive</span>
+                {% endif %}
+              </td>
+
+              <td class="px-4 py-3 text-gray-600">
+                {{ membership.joined_at|date:"M j, Y" }}
+              </td>
+
+              <td class="px-4 py-3">
+                <div class="space-y-2">
+                  <form method="post" action="{% url 'settings_panel:update_member_role' membership.id %}" class="flex flex-wrap gap-2">
+                    {% csrf_token %}
+
+                    <select name="role" class="rounded-md border px-2 py-1 text-sm">
+                      <option value="owner" {% if membership.role == "owner" %}selected{% endif %}>Owner</option>
+                      <option value="admin" {% if membership.role == "admin" %}selected{% endif %}>Admin</option>
+                      <option value="staff" {% if membership.role == "staff" %}selected{% endif %}>Staff</option>
+                      <option value="member" {% if membership.role == "member" %}selected{% endif %}>Member</option>
+                      <option value="viewer" {% if membership.role == "viewer" %}selected{% endif %}>Viewer</option>
+                    </select>
+
+                    <button class="rounded-md border px-2 py-1 text-sm hover:bg-gray-50" type="submit">
+                      Update
+                    </button>
+                  </form>
+
+                  {% if membership.is_active %}
+                    <form method="post" action="{% url 'settings_panel:deactivate_member' membership.id %}">
+                      {% csrf_token %}
+                      <button class="text-sm text-red-600 hover:underline" type="submit">
+                        Deactivate
+                      </button>
+                    </form>
+                  {% else %}
+                    <span class="text-xs text-gray-400">Already inactive</span>
+                  {% endif %}
+                </div>
+              </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="4" class="px-4 py-6 text-gray-500">No members found.</td>
+              <td colspan="5" class="px-4 py-6 text-gray-500">No members found.</td>
             </tr>
           {% endfor %}
         </tbody>
