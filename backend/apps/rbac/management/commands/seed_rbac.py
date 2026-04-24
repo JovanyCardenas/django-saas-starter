@@ -58,14 +58,14 @@ DEFAULT_ROLES = {
         "timesheets.view",
         "requirements.manage",
     ],
-    "fellow": [
-        # fellows typically view only their own data; enforce with object-level checks later
-        "timesheets.view",
-    ],
-    "cho": [
-        # cho typically approves or views student timesheets assigned to them; object-level checks later
-        "timesheets.view",
-    ],
+    # "fellow": [
+    #     # fellows typically view only their own data; enforce with object-level checks later
+    #     "timesheets.view",
+    # ],
+    # "cho": [
+    #     # cho typically approves or views student timesheets assigned to them; object-level checks later
+    #     "timesheets.view",
+    # ],
 }
 
 
