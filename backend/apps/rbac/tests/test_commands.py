@@ -54,3 +54,6 @@ class RBACCommandTests(TestCase):
                 message__icontains="RBAC role",
             ).exists()
         )
+
+        self.assertTrue(Role.objects.filter(tenant=self.tenant, code="owner").exists())
+        self.assertTrue(Role.objects.filter(tenant=self.tenant, code="admin").exists())

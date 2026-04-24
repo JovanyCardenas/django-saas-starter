@@ -19,6 +19,24 @@ DEFAULT_PERMS = [
 
 DEFAULT_ROLES = {
     # role_code: [perm_codes...]
+        "owner": [
+        "applications.view", "applications.review",
+        "interviews.view", "interviews.score",
+        "placements.manage",
+        "timesheets.view", "timesheets.approve",
+        "requirements.manage",
+        "users.manage",
+        "settings.manage",
+    ],
+    "admin": [
+        "applications.view", "applications.review",
+        "interviews.view", "interviews.score",
+        "placements.manage",
+        "timesheets.view", "timesheets.approve",
+        "requirements.manage",
+        "users.manage",
+        "settings.manage",
+    ],
     "staff_admin": [
         "applications.view", "applications.review",
         "interviews.view", "interviews.score",
