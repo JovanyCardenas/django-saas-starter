@@ -89,6 +89,8 @@ TEMPLATES = [
     },
 ]
 
+TEST_RUNNER = "config.test_runner.AppsTestRunner"
+
 WSGI_APPLICATION = "config.wsgi.application"
 
 # -----------------------
