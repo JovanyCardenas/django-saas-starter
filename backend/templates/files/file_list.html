@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Files{% endblock %}
+
+{% block content %}
+  <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold">Files</h1>
+        <p class="text-sm text-gray-600">Tenant-scoped uploaded files.</p>
+      </div>
+
+      <a href="{% url 'files:upload' %}" class="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+        Upload File
+      </a>
+    </div>
+
+    <div class="overflow-hidden rounded-lg border bg-white">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-left">
+          <tr>
+            <th class="px-4 py-3">Title</th>
+            <th class="px-4 py-3">Category</th>
+            <th class="px-4 py-3">Uploaded By</th>
+            <th class="px-4 py-3">Uploaded</th>
+            <th class="px-4 py-3">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for file in files %}
+            <tr class="border-t">
+              <td class="px-4 py-3">
+                <div class="font-medium">{{ file.title }}</div>
+                {% if file.description %}
+                  <div class="text-xs text-gray-500">{{ file.description }}</div>
+                {% endif %}
+              </td>
+
+              <td class="px-4 py-3">
+                <span class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+                  {{ file.get_category_display }}
+                </span>
+              </td>
+
+              <td class="px-4 py-3">
+                {% if file.uploaded_by %}
+                  {{ file.uploaded_by.email }}
+                {% else %}
+                  System
+                {% endif %}
+              </td>
+
+              <td class="px-4 py-3 text-gray-600">
+                {{ file.uploaded_at|date:"M j, Y" }}
+              </td>
+
+              <td class="px-4 py-3">
+                <div class="flex flex-wrap gap-2">
+                  <a class="rounded-md border px-2 py-1 text-sm hover:bg-gray-50" href="{{ file.file.url }}" target="_blank">
+                    Open
+                  </a>
+
+                  <form method="post" action="{% url 'files:deactivate' file.id %}">
+                    {% csrf_token %}
+                    <button class="text-sm text-red-600 hover:underline" type="submit">
+                      Deactivate
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="px-4 py-6 text-gray-500">No files uploaded yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

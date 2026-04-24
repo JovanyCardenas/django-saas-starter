@@ -8,6 +8,7 @@
         <a class="block rounded-md px-3 py-2 text-sm hover:bg-gray-50" href="/admin/">Admin</a>
       {% endif %}
       <a class="block rounded-md px-3 py-2 text-sm hover:bg-gray-50" href="/tenants/choose/">Tenants</a>
+      <a class="block rounded-md px-3 py-2 text-sm hover:bg-gray-50" href="/files/">Files</a>
     </div>
 
     {% if request.user.is_superuser or request.user.tenant_memberships.all %}
