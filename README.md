@@ -26,23 +26,28 @@ Each product will have **its own users, database, deployment, and domain**. No s
 ---
 
 ## Project Structure
-backend/
-config/
-settings/
-base.py
-dev.py
-prod.py
-apps/
-accounts/        # custom User model, auth flows
-rbac/            # roles + permissions helpers
-tenants/         # optional multi-tenant models + middleware
-auditlog/        # audit events
-notifications/   # in-app notifications
-files/           # uploads + file metadata
-templates/
-static/
-manage.py
-requirements.txt
+
+backend/<br>
+│<br>
+├── config/<br>
+│   ├── settings.py<br>
+│   ├── urls.py<br>
+│<br>
+├── apps/<br>
+│   ├── accounts/        # authentication + user model<br>
+│   ├── tenants/         # orgs + memberships + middleware<br>
+│   ├── rbac/            # roles + permissions<br>
+│   ├── auditlog/        # audit tracking<br>
+│   ├── notifications/   # in-app notifications (foundation)<br>
+│   ├── files/           # file uploads<br>
+│   ├── settings_panel/  # org settings, members, roles UI<br>
+│   ├── dashboard/       # main app entry point<br>
+│<br>
+├── templates/<br>
+├── static/<br>
+├── manage.py<br>
+├── requirements.txt<br>
+
 ### Apps Overview
 
 #### `apps/accounts`
@@ -55,26 +60,42 @@ requirements.txt
   - Roles (e.g., Admin, Staff, Member)
   - Permission strings (e.g., `applications.review`)
 - Helpers/decorators for view protection
+- Role assignment per tenant
 
-#### `apps/tenants` (optional)
+#### `apps/tenants`
 - Tenant models for organizations/schools/programs
 - Membership mapping users to tenants
 - Middleware to attach `request.tenant`
 - Utilities for tenant scoping
+- Supports multi-organization users
 
 > Products can choose to use tenants (College Corps and SkillsUSA likely will).
 
+#### `apps/settings_panel`
+- Organization settings UI
+- Member management
+- Role management
+- Invitation system
+
 #### `apps/auditlog`
-- Central audit event store
-- Helper to log events consistently
+- Central logging system
+- Tracks:
+  - membership changes
+  - role assignments
+  - file uploads
+  - organization updates
 
 #### `apps/notifications`
 - In-app notifications (`read_at` tracking)
 - Helper functions to create notifications
+- Read/unread tracking
 
 #### `apps/files`
 - File uploads + metadata
 - Local storage in dev; cloud-ready pattern for prod
+- Tenant-scoped file uploads
+- Metadata + categories
+- Soft delete (deactivate)
 
 ---
 
@@ -95,3 +116,117 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
+```
+
+### 3) Create environment file
+
+```bash
+cp .env.example .env
+```
+Edit ``.env`` if needed.
+
+### 4) Run migrations
+
+```bash
+python manage.py migrate
+```
+
+### 5) Create Superuser
+
+```bash
+python manage.py createsuperuser
+```
+
+### 6) Bootstrap your first organization
+
+```bash
+python manage.py bootstrap_tenant "My Organization" \
+  --slug my-org \
+  --owner-email your@email.com \
+  --owner-password TempPass123!
+```
+
+This will:
+
+- Create tenant
+- Create user (if needed)
+- Add membership
+- Seed RBAC roles
+- Assign owner role
+
+### 7) Run server
+
+```bash
+python manage.py runserver
+```
+Open:
+```
+http://127.0.0.1:8000/
+```
+---
+### Usefull Commands
+
+```bash
+# Create tenant
+python manage.py create_tenant "Test Org" --slug test-org --if-exists reuse
+
+# Add membership
+python manage.py add_membership test-org user@email.com --role owner
+
+# Seed RBAC roles
+python manage.py seed_rbac test-org
+
+# Assign RBAC role
+python manage.py assign_role test-org user@email.com owner --replace
+
+# Run tests
+python manage.py test
+```
+
+---
+
+### Main Pages
+
+```
+/                       Dashboard
+/accounts/login/        Login
+/tenants/choose/        Select organization
+/settings/organization/ Organization settings
+/settings/members/      Member management
+/settings/roles/        RBAC roles
+/files/                 File uploads
+/audit/                 Audit log
+/admin/                 Django admin
+```
+
+---
+
+### Notes
+- **CSRF errors in dev?**<br>
+  Add to .env:
+  ```
+  DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+  ```
+- **File uploads**<br>
+  Store locally in dev (``/media/``), cloud-ready for production
+- **Tenants**<br>
+  Everything is scoped to ``request.tenant``
+
+---
+
+### Next Steps (Project Roadmap)
+
+- Notification UI
+- File permissions
+- Activity dashboard
+- API layer (Django REST Framework)
+- Background jobs (Celery/Redis)
+- Production deployment (Render / Docker)
+
+--- 
+
+### Purpose
+This template exists so you can:
+- Build apps faster
+- Reuse a solid SaaS foundation
+- Avoid rebuilding auth, RBAC, tenants, etc. everytime
