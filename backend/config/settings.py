@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.files",
     "apps.dashboard",
+    "apps.settings_panel",
 ]
 
 MIDDLEWARE = [

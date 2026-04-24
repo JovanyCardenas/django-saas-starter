@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Roles{% endblock %}
+
+{% block content %}
+  <div class="space-y-4">
+    <div>
+      <h1 class="text-2xl font-semibold">RBAC Roles</h1>
+      <p class="text-sm text-gray-600">Assigned RBAC roles for this tenant.</p>
+    </div>
+
+    <div class="overflow-hidden rounded-lg border bg-white">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-left">
+          <tr>
+            <th class="px-4 py-3">User</th>
+            <th class="px-4 py-3">Role Code</th>
+            <th class="px-4 py-3">Role Name</th>
+            <th class="px-4 py-3">Active</th>
+            <th class="px-4 py-3">Assigned</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in roles %}
+            <tr class="border-t">
+              <td class="px-4 py-3">{{ item.user.email }}</td>
+              <td class="px-4 py-3">{{ item.role.code }}</td>
+              <td class="px-4 py-3">{{ item.role.name }}</td>
+              <td class="px-4 py-3">{{ item.is_active }}</td>
+              <td class="px-4 py-3">{{ item.assigned_at }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="px-4 py-6 text-gray-500">No RBAC roles assigned.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}
