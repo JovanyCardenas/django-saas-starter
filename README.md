@@ -140,9 +140,9 @@ python manage.py createsuperuser
 ### 6) Bootstrap your first organization
 
 ```bash
-python manage.py bootstrap_tenant "My Organization" \
-  --slug my-org \
-  --owner-email your@email.com \
+python manage.py bootstrap_tenant "My Organization" 
+  --slug my-org 
+  --owner-email your@email.com 
   --owner-password TempPass123!
 ```
 
