@@ -3,19 +3,83 @@
 {% block title %}Login{% endblock %}
 
 {% block content %}
-  <div class="mx-auto max-w-md rounded-lg border bg-white p-6">
-    <h1 class="text-2xl font-semibold">Login</h1>
-    <p class="mt-1 text-sm text-gray-600">Sign in to continue.</p>
+<div class="min-h-screen flex items-center justify-center bg-gray-50 px-6 py-10">
 
-    <form method="post" class="mt-6 space-y-4">
+  <!-- Wider clean card -->
+  <div class="w-full max-w-xl rounded-2xl border bg-white p-10 shadow-sm">
+
+    <h2 class="text-3xl font-semibold text-gray-900 text-center">
+      Sign in
+    </h2>
+
+    <form method="post" class="mt-8 space-y-5">
       {% csrf_token %}
-      {{ form.as_p }}
-      <button class="w-full rounded-md bg-black px-4 py-2 text-sm font-medium text-white" type="submit">Login</button>
+
+      {% if form.non_field_errors %}
+        <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      {% for field in form %}
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700">
+            {{ field.label }}
+          </label>
+
+          {{ field }}
+
+          {% if field.errors %}
+            <p class="mt-1 text-sm text-red-600">
+              {{ field.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+      <div class="flex justify-between text-sm">
+        <a href="{% url 'accounts:password_reset' %}"
+           class="text-gray-600 hover:text-gray-900 hover:underline">
+          Forgot password?
+        </a>
+      </div>
+
+      <button
+        class="w-full rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+        type="submit">
+        Sign in
+      </button>
     </form>
 
-    <div class="mt-4 space-y-2 text-sm">
-      <p><a class="font-medium text-gray-800 hover:underline" href="{% url 'accounts:password_reset' %}">Forgot password?</a></p>
-      <p class="text-gray-600">Don’t have an account? <a class="font-medium text-gray-800 hover:underline" href="{% url 'accounts:signup' %}">Create account</a></p>
-    </div>
+    <p class="mt-6 text-center text-sm text-gray-600">
+      Don’t have an account?
+      <a href="{% url 'accounts:signup' %}"
+         class="font-semibold text-gray-900 hover:underline">
+        Create account
+      </a>
+    </p>
+
   </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("input").forEach(function (input) {
+      input.classList.add(
+        "w-full",
+        "rounded-lg",
+        "border",
+        "border-gray-300",
+        "px-4",
+        "py-3",
+        "text-sm",
+        "outline-none",
+        "transition",
+        "focus:border-gray-900",
+        "focus:ring-2",
+        "focus:ring-gray-900/10"
+      );
+    });
+  });
+</script>
 {% endblock %}
