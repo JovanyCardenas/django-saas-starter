@@ -102,7 +102,7 @@ backend/<br>
 ## Getting Started
 
 ### 1) Requirements
-- Python 3.11+ recommended
+- Python 3.10+ recommended
 - PostgreSQL recommended (SQLite can be used in dev if configured)
 
 ### 2) Setup
@@ -121,7 +121,8 @@ pip install -r requirements.txt
 ### 3) Create environment file
 
 ```bash
-cp .env.example .env
+cp .example.env .env
+# (or use the legacy filename: cp .env.example .env)
 ```
 Edit ``.env`` if needed.
 
