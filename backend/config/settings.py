@@ -148,8 +148,8 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # WhiteNoise compression storage
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", BASE_DIR / "media"))
 
 LOGIN_REDIRECT_URL = "/tenants/choose/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
